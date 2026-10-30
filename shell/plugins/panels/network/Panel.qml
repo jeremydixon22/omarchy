@@ -357,10 +357,15 @@ Panel {
   // The KeyboardPanel's focusTarget covers initial popup-open; this handles
   // the inline-editor case where focus was handed off to a child.
   onPasswordSsidChanged: {
-    if (passwordSsid === "") syncWifiNetworks()
     if (passwordSsid === "" && opened) {
       passwordText = ""
-      Qt.callLater(function() { if (panel.loadedContent) panel.loadedContent.forceActiveFocus() })
+      // Closing can happen from a delegate while syncWifiNetworks is walking
+      // the same model. Publish the held scan only after that call unwinds, so
+      // the delegate is never destroyed inside its own action handler.
+      Qt.callLater(function() {
+        if (root.passwordSsid === "") root.syncWifiNetworks()
+        if (panel.loadedContent) panel.loadedContent.forceActiveFocus()
+      })
     }
   }
 
@@ -390,6 +395,15 @@ Panel {
   }
 
   onWifiDeviceChanged: {
+    // The station disappearing removes the editor from the model. Drop its
+    // state as well, or the invisible prompt keeps PanelKeyCatcher blocked.
+    // Let the model hide the delegate first; cancelling it in the same change
+    // notification briefly makes the delegate's implicit height recursive.
+    if (!wifiDevice && passwordSsid !== "") {
+      Qt.callLater(function() {
+        if (!root.wifiDevice && root.passwordSsid !== "") root.cancelPasswordPrompt()
+      })
+    }
     setScannerEnabled(true)
     syncWifiNetworks()
     resetActiveApSignal()
@@ -1985,11 +1999,11 @@ Panel {
           // Signal strength is conveyed by the wifi-bars icon and the
           // right-edge glyph/buttons carry protection or forget affordances,
           // so the second line only carries action status (Connecting…,
-          // Connected, Failed, etc.). Collapses to zero height when empty
-          // so rows without status keep a tight one-line look.
+          // Connected, Failed, etc.). Column excludes an invisible child from
+          // layout, so rows without status keep a tight one-line look without
+          // binding Text.height back to its own implicitHeight.
           text: row.statusText
           visible: row.statusText !== ""
-          height: visible ? implicitHeight : 0
           color: row.statusColor
           font.family: root.bar.fontFamily
           font.pixelSize: Style.font.caption

@@ -130,6 +130,25 @@ ShellRoot {
   function timeoutReleased() {
     check(panel.passwordSsid === "" && panel.actionKind === "", "a connection timeout closes the credential prompt")
     check(ssids() === "Delta,Alpha", "a connection timeout publishes the latest scan (got " + ssids() + ")")
+    NetworkMock.devices = { values: [NetworkMock.wifi] }
+    scan([alpha, cafe])
+    Qt.callLater(startDeviceLossCase)
+  }
+
+  function startDeviceLossCase() {
+    panel.selectedIndex = 1
+    panel.openPasswordPrompt("Cafe")
+    panel.passwordText = "hunter"
+    check(panel.passwordSsid === "Cafe" && panel.testContent.blocked,
+      "the credential prompt owns keyboard input before device loss")
+    NetworkMock.devices = { values: [] }
+    Qt.callLater(deviceLost)
+  }
+
+  function deviceLost() {
+    check(panel.passwordSsid === "", "losing the Wi-Fi device closes the credential prompt")
+    check(!panel.wifiStationAvailable, "losing the Wi-Fi device clears station availability")
+    check(!panel.testContent.blocked, "losing the Wi-Fi device releases panel keyboard input")
     if (!failed) console.log("RESULT pass")
     done.start()
   }
