@@ -869,14 +869,14 @@ Panel {
     runNetworkAction("connect", networkForSsid(ssid), function(network) { network.connect() })
   }
 
-  function connectWithPassphrase(ssid, passphrase) {
-    runNetworkAction("connect", networkForSsid(ssid), function(network) { network.connectWithPsk(passphrase) })
+  function connectWithPassphrase(network, passphrase) {
+    runNetworkAction("connect", network, function(liveNetwork) { liveNetwork.connectWithPsk(passphrase) })
   }
 
-  function connectEnterprise(ssid, identity, passphrase) {
-    runNetworkAction("connect", networkForSsid(ssid), function(network) {
+  function connectEnterprise(network, identity, passphrase) {
+    runNetworkAction("connect", network, function(liveNetwork) {
       enterpriseConnect.secret = passphrase
-      enterpriseConnect.command = ["bash", "-c", Model.enterpriseConnectScript, "nmcli-eap", ssid, identity]
+      enterpriseConnect.command = ["bash", "-c", Model.enterpriseConnectScript, "nmcli-eap", liveNetwork.name, identity]
       enterpriseConnect.running = true
     })
   }
@@ -1070,14 +1070,19 @@ Panel {
     repeat: false
     onTriggered: {
       if (!root.actionKind) return
+      var timedOutKind = root.actionKind
       var reason
-      if (root.actionKind === "connect") reason = Commons.I18n.t("network.timedOutConnecting")
-      else if (root.actionKind === "disconnect") reason = Commons.I18n.t("network.timedOutDisconnecting")
+      if (timedOutKind === "connect") reason = Commons.I18n.t("network.timedOutConnecting")
+      else if (timedOutKind === "disconnect") reason = Commons.I18n.t("network.timedOutDisconnecting")
       else reason = Commons.I18n.t("network.timedOutForgetting")
       root.failureSsid = root.actionSsid
       root.failureReason = reason
       root.actionSsid = ""
       root.actionKind = ""
+      // A credentialed connection keeps the prompt's snapshot frozen while
+      // it is in flight. Release that snapshot on timeout so a network that
+      // left during the attempt cannot strand the panel on stale rows.
+      if (timedOutKind === "connect" && root.passwordSsid === root.failureSsid) root.cancelPasswordPrompt()
       root.refresh()
     }
   }
@@ -1793,11 +1798,17 @@ Panel {
 
     function submitCredentials() {
       if (!net || root.busy || root.passwordText.length === 0) return
-      // The list holds still while typing, so the network may have left the
-      // scan; closing the prompt shows the list as it now is.
-      if (!root.networkForSsid(net.ssid)) return root.cancelPasswordPrompt()
-      if (!isEnterprise) return root.connectWithPassphrase(net.ssid, root.passwordText)
-      if (root.identityText.length > 0) root.connectEnterprise(net.ssid, root.identityText, root.passwordText)
+      var liveNetwork = root.networkForSsid(net.ssid)
+      if (!liveNetwork) {
+        // The visible rows stay frozen during entry, but the selected access
+        // point can still disappear from the live scan. Close the stale
+        // prompt and publish the latest scan instead of accepting a submit
+        // that cannot start.
+        root.cancelPasswordPrompt()
+        return
+      }
+      if (!isEnterprise) return root.connectWithPassphrase(liveNetwork, root.passwordText)
+      if (root.identityText.length > 0) root.connectEnterprise(liveNetwork, root.identityText, root.passwordText)
     }
 
     Connections {

@@ -29,6 +29,7 @@ ShellRoot {
     property real signalStrength: 0
     property int security: WifiSecurityType.Wpa2Psk
     signal connectionFailed(int reason)
+    function connectWithPsk(passphrase) {}
   }
 
   Ap { id: alpha; name: "Alpha"; signalStrength: 0.7 }
@@ -73,6 +74,7 @@ ShellRoot {
     running: true
     onTriggered: {
       test.check(test.ssids() === "Alpha,Cafe", "first scan lists by signal (got " + test.ssids() + ")")
+      test.check(panel.testContent !== null && panel.testNetworkList !== null, "the panel builds its network list")
       // As a click on the row does.
       panel.selectedIndex = 1
       panel.openPasswordPrompt("Cafe")
@@ -108,6 +110,26 @@ ShellRoot {
   function submitted() {
     check(panel.passwordSsid === "" && panel.actionKind === "", "submitting to a network that left the scan closes the prompt")
     check(ssids() === "Delta,Echo,Alpha", "closing the prompt shows the latest scan (got " + ssids() + ")")
+    scan([alpha, cafe])
+    Qt.callLater(startTimeoutCase)
+  }
+
+  function startTimeoutCase() {
+    panel.selectedIndex = 1
+    panel.openPasswordPrompt("Cafe")
+    panel.passwordText = "hunter"
+    var row = panel.testNetworkList.itemAtIndex(1)
+    if (row) row.children[0].children[1].submitCredentials()
+    check(panel.actionKind === "connect", "submitting to a live network starts a connection")
+    scan([alpha, delta])
+    check(ssids() === "Alpha,Cafe", "the list remains stable while the connection is in flight")
+    panel.testActionTimeout.triggered()
+    Qt.callLater(timeoutReleased)
+  }
+
+  function timeoutReleased() {
+    check(panel.passwordSsid === "" && panel.actionKind === "", "a connection timeout closes the credential prompt")
+    check(ssids() === "Delta,Alpha", "a connection timeout publishes the latest scan (got " + ssids() + ")")
     if (!failed) console.log("RESULT pass")
     done.start()
   }

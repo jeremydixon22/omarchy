@@ -184,6 +184,19 @@ for (const name of ['Wpa3SuiteB192', 'Sae', 'Wpa2Eap', 'Wpa2Psk', 'WpaEap', 'Wpa
 assertEqual(network.requiresCredentials(security.Owe, security.Open, security.Owe), false, 'network does not ask for OWE credentials')
 assertEqual(network.requiresCredentials(security.Open, security.Open, security.Owe), false, 'network does not ask for open-network credentials')
 
+assert(
+  /function submitCredentials\(\)[\s\S]*var liveNetwork = root\.networkForSsid\(net\.ssid\)[\s\S]*if \(!liveNetwork\)[\s\S]*root\.cancelPasswordPrompt\(\)[\s\S]*root\.connectWithPassphrase\(liveNetwork, root\.passwordText\)/.test(panelSource),
+  'network resolves a live access point once and closes a stale credential prompt before submitting'
+)
+assert(
+  /function connectWithPassphrase\(network, passphrase\)[\s\S]*runNetworkAction\("connect", network/.test(panelSource),
+  'network submits credentials against the live access point selected by the prompt'
+)
+assert(
+  /id: actionTimeout[\s\S]*var timedOutKind = root\.actionKind[\s\S]*timedOutKind === "connect"[\s\S]*root\.cancelPasswordPrompt\(\)/.test(panelSource),
+  'network releases a credential snapshot when its connection attempt times out'
+)
+
 const reasons = { NoSecrets: 1, WifiAuthTimeout: 2, WifiNetworkLost: 3, WifiClientDisconnected: 4, WifiClientFailed: 5 }
 assertEqual(network.networkFailureReason(reasons.NoSecrets, true, reasons), 'Passphrase required', 'network maps missing credential failures')
 assertEqual(network.networkFailureReason(reasons.WifiAuthTimeout, true, reasons), 'Wrong password', 'network maps credentialed auth timeouts')
