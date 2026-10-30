@@ -36,13 +36,17 @@ source = source.replace(/\bNetworking\./g, 'NetworkMock.')
 source = source.replace('      id: keyCatcher\n', `      id: keyCatcher
       property alias testButton: portalAction
       property alias testTitle: heroSsid
+      property alias testNetworkList: networkList
 `)
+source = source.replace('        id: pwField\n', '        id: pwField\n        objectName: "testPasswordField"\n')
+source = source.replace('        id: revealPwBtn\n', '        id: revealPwBtn\n        objectName: "testRevealButton"\n')
 source = source.replace('  id: root', `  id: root
   function testEnsureContent() { return panel.ensureContent() }
   readonly property Item testContent: panel.loadedContent
   readonly property Item testButton: panel.loadedContent ? panel.loadedContent.testButton : null
   readonly property Item testKeys: panel.loadedContent
   readonly property Item testMeta: panel.loadedContent ? panel.loadedContent.heroMeta : null
+  readonly property Item testNetworkList: panel.loadedContent ? panel.loadedContent.testNetworkList : null
   readonly property Item testTitle: panel.loadedContent ? panel.loadedContent.testTitle : null
   property alias testPoll: connectivityPoll
   property alias testApPoll: activeApSignalPoll
@@ -99,3 +103,7 @@ while IFS= read -r args; do
   [[ $args == "-t -f IN-USE,SIGNAL device wifi list ifname test-wifi --rescan no" ]] || fail "in-use access point read never rescans" "$args"
 done <"$stage/nmcli.log"
 pass "network keeps Wi-Fi through OWE transition scan churn, reads the in-use access point, and discards stale reads"
+
+stage_panel password-visibility
+run_panel "network password visibility"
+pass "network passphrases reveal on demand, stay in place, and return focus to entry"
