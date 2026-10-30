@@ -95,7 +95,9 @@ ShellRoot {
     check(passwordField.password, "the passphrase starts masked")
     check(passwordField.text === "hunter", "the passphrase text remains entered")
     check(revealButton.tooltipText === "Show password", "the reveal action starts labelled")
-    revealButton.clicked()
+    check(revealButton.Accessible.role === Accessible.Button, "the reveal action exposes its button role")
+    check(revealButton.Accessible.name === "Show password", "the reveal action exposes its current label")
+    revealButton.Accessible.pressAction()
     Qt.callLater(revealed)
   }
 

@@ -8,7 +8,6 @@ run_node_test <<'JS'
 const fs = require('fs')
 const network = requireFromRoot('shell/plugins/panels/network/Model.js')
 const panelSource = fs.readFileSync(root + '/shell/plugins/panels/network/Panel.qml', 'utf8')
-const actionButtonSource = fs.readFileSync(root + '/shell/Ui/PanelActionButton.qml', 'utf8')
 
 // scannerEnabled lives on a shared WifiDevice with no reference counting, so
 // the panel has to own what it enabled. Run the helper's own JavaScript against
@@ -184,29 +183,6 @@ for (const name of ['Wpa3SuiteB192', 'Sae', 'Wpa2Eap', 'Wpa2Psk', 'WpaEap', 'Wpa
 }
 assertEqual(network.requiresCredentials(security.Owe, security.Open, security.Owe), false, 'network does not ask for OWE credentials')
 assertEqual(network.requiresCredentials(security.Open, security.Open, security.Owe), false, 'network does not ask for open-network credentials')
-
-assert(/property bool passwordVisible: false/.test(panelSource), 'network keeps password visibility explicit and hidden by default')
-assert(/password: !root\.passwordVisible/.test(panelSource), 'network binds passphrase masking to the visibility control')
-assert(/network\.hidePassword[\s\S]*network\.showPassword/.test(panelSource), 'network labels both password visibility states')
-assert(/Accessible\.role: Accessible\.Button/.test(actionButtonSource), 'panel action buttons expose their button role')
-assert(/Accessible\.name: root\.tooltipText/.test(actionButtonSource), 'panel action buttons expose their tooltip as an accessible name')
-assert(/Accessible\.onPressAction: if \(root\.enabled\) root\.clicked\(\)/.test(actionButtonSource), 'assistive technology can invoke enabled panel action buttons')
-assert(
-  /id: revealPwBtn[\s\S]*onClicked: \{[\s\S]*passwordVisible = !root\.passwordVisible[\s\S]*pwField\.forceActiveFocus/.test(panelSource),
-  'network exposes a password visibility toggle and returns focus to credential entry'
-)
-assert(
-  /id: idField[\s\S]*anchors\.right: parent\.right[\s\S]*id: pwField[\s\S]*anchors\.right: revealPwBtn\.left/.test(panelSource),
-  'enterprise identity keeps its full row while passphrase actions stay on the passphrase row'
-)
-assert(
-  /id: revealPwBtn[\s\S]*anchors\.verticalCenter: pwField\.verticalCenter[\s\S]*id: connectPwBtn[\s\S]*anchors\.verticalCenter: pwField\.verticalCenter/.test(panelSource),
-  'password visibility and connect actions align with the passphrase field'
-)
-assert(
-  /function cancelPasswordPrompt\(\)[\s\S]*passwordVisible = false/.test(panelSource),
-  'network hides the password again whenever credential entry is cancelled'
-)
 
 const reasons = { NoSecrets: 1, WifiAuthTimeout: 2, WifiNetworkLost: 3, WifiClientDisconnected: 4, WifiClientFailed: 5 }
 assertEqual(network.networkFailureReason(reasons.NoSecrets, true, reasons), 'Passphrase required', 'network maps missing credential failures')
