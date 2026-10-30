@@ -2076,6 +2076,7 @@ Panel {
         hoverColor: Commons.Color.accent
         fontFamily: root.bar.fontFamily
         focusable: true
+        Keys.onEscapePressed: root.cancelPasswordPrompt()
         onClicked: {
           root.passwordVisible = !root.passwordVisible
           // Revealing the value is part of credential entry, not a change of

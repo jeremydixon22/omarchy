@@ -12,6 +12,7 @@ ShellRoot {
   property var passwordRow: null
   property var passwordField: null
   property var revealButton: null
+  property bool awaitingEscape: false
   function check(ok, message) {
     if (!ok) {
       failed = true
@@ -117,10 +118,23 @@ ShellRoot {
   function hidden() {
     check(passwordField.password, "a second reveal action masks the passphrase again")
     check(passwordField.activeFocus, "hiding returns focus to passphrase entry")
-    panel.cancelPasswordPrompt()
-    check(!panel.passwordVisible, "closing the prompt resets password visibility")
-    if (!failed) console.log("RESULT pass")
-    done.start()
+    revealButton.forceActiveFocus()
+    check(revealButton.activeFocus, "the reveal action can own keyboard focus")
+    awaitingEscape = true
+    console.log("INPUT escape")
+  }
+
+  Timer {
+    interval: 50
+    repeat: true
+    running: test.awaitingEscape
+    onTriggered: {
+      if (panel.passwordSsid !== "") return
+      stop()
+      check(!panel.passwordVisible, "Escape on the reveal action closes and resets the prompt")
+      if (!failed) console.log("RESULT pass")
+      done.start()
+    }
   }
 
   Timer { id: done; interval: 200; onTriggered: Qt.quit() }
