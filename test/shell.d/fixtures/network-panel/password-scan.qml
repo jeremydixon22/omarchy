@@ -111,6 +111,19 @@ ShellRoot {
     check(panel.passwordSsid === "" && panel.actionKind === "", "submitting to a network that left the scan closes the prompt")
     check(ssids() === "Delta,Echo,Alpha", "closing the prompt shows the latest scan (got " + ssids() + ")")
     scan([alpha, cafe])
+    Qt.callLater(startInRangeTimeoutCase)
+  }
+
+  function startInRangeTimeoutCase() {
+    panel.selectedIndex = 1
+    panel.openPasswordPrompt("Cafe")
+    panel.passwordText = "hunter"
+    var row = panel.testNetworkList.itemAtIndex(1)
+    if (row) row.children[0].children[1].submitCredentials()
+    panel.testActionTimeout.triggered()
+    check(panel.passwordSsid === "Cafe" && panel.passwordText === "hunter",
+      "a connection timeout keeps the prompt and its text while the network is still in range")
+    panel.cancelPasswordPrompt()
     Qt.callLater(startTimeoutCase)
   }
 

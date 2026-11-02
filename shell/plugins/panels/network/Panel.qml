@@ -1096,7 +1096,7 @@ Panel {
       // A credentialed connection keeps the prompt's snapshot frozen while
       // it is in flight. Release that snapshot on timeout so a network that
       // left during the attempt cannot strand the panel on stale rows.
-      if (timedOutKind === "connect" && root.passwordSsid === root.failureSsid) root.cancelPasswordPrompt()
+      if (timedOutKind === "connect" && root.passwordSsid === root.failureSsid && !root.networkForSsid(root.failureSsid)) root.cancelPasswordPrompt()
       root.refresh()
     }
   }
